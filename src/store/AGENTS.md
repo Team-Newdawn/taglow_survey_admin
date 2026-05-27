@@ -16,3 +16,4 @@ Owns client/UI state with Zustand.
 - Do not import Supabase SDK, gateways, mappers, or raw rows.
 - Keep stores serializable where practical.
 - Reset stores when survey id changes if stale selection could corrupt the UI.
+- Current admin/member data is server state and belongs in `useAdminAuthQueries`, not Zustand.

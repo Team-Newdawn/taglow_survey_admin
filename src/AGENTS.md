@@ -8,6 +8,7 @@ This directory contains the React application described by the Admin TDD.
 src/
   app/
   api/admin/
+  supabase/migrations/
   store/
   components/
   utils/
@@ -39,6 +40,7 @@ Avoid reverse imports. Shared UI belongs in `components`; admin feature screens 
 - Prefer named exports for app modules.
 - Use stable ids/keys for survey logic. Do not compare translated labels to drive behavior.
 - Keep Korean/English display text in model/config fields or UI copy constants, not in raw SQL/query code.
+- Follow TDD v2 names for admin analysis and builder files: `SurveyAnalysisPage`, `QuestionEditorPanel`, `ImageAssetPanel`, and `PublishChecklistPanel`.
 
 ## Boundary Checks
 

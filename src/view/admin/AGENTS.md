@@ -8,9 +8,9 @@ Owns Taglow Admin feature screens.
 - `surveys`
 - `builder`
 - `preview`
-- `responses`
 - `analysis`
-- `report`
+- `settings`
+- `system`
 
 ## Rules
 
@@ -19,11 +19,13 @@ Owns Taglow Admin feature screens.
 - Keep route-specific orchestration in page files.
 - Keep repeated widgets in each feature's `components` folder or promote them to `src/components` only when truly generic.
 - All analysis-facing UI must display N and low-sample warnings when provided by the API.
+- Response status summary now belongs in `analysis` as `ResponseSummaryCard`; do not recreate a separate `/responses` route.
+- Report/poster draft remains PRD future scope unless the user explicitly asks for it; TDD v2 does not define a `report` route.
 
 ## CSS Layout
 
-- Each admin page keeps its page-level CSS beside the page file in its feature directory.
-- Each admin feature component keeps its CSS beside the component file inside `components`.
+- Each admin page keeps page-level CSS in the feature's `css` directory.
+- Each admin feature component keeps component CSS in that feature's `components/css` directory.
 - Import page CSS from the page file only.
 - Import component CSS from the component file only.
 - Use page CSS for route composition and component CSS for reusable feature widgets.

@@ -5,14 +5,13 @@ Owns analysis cards and workbench controls.
 ## Expected Components
 
 - `GlobalFilterBar`
+- `ResponseSummaryCard`
 - `SectionAverageCard`
-- `QuestionAverageTable`
-- `PriorityTop5Card`
-- `GroupCompareChart`
+- `GroupCompareCard`
 - `BorichCard`
-- `LocusMatrixCard`
-- `TextGroupPanel`
-- `TagHeatmapPanel`
+- `LocusCard`
+- `HeatmapCard`
+- `TextAnswerTable`
 
 ## Rules
 
@@ -20,6 +19,6 @@ Owns analysis cards and workbench controls.
 - Prefer clear labels over statistical jargon in UI.
 - Components render data; formulas belong in API/query/controller/SQL layers.
 - Charts and heatmaps must be responsive without overlapping text.
-- Keep each analysis component's CSS beside the component file.
+- Keep each analysis component's CSS in `src/view/admin/analysis/components/css`.
 - Component CSS owns chart/card/table/heatmap internals, legends, empty states, and warning badges.
-- Do not make analysis components depend on `AnalysisWorkbenchPage.css`.
+- Do not make analysis components depend on `SurveyAnalysisPage.css`.

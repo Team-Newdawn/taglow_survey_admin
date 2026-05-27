@@ -12,7 +12,7 @@ Owns application wiring only:
 
 - Compose providers: router, query client, admin API runtime provider, auth/session provider if needed.
 - Define route objects for the TDD admin paths.
-- Implement route guards for session, `@handong.ac.kr`, admin allowlist, and survey access.
+- Implement route guards for session, `@handong.ac.kr`, active `admin_members` access, and survey access.
 - Keep shell-level loading and error boundaries here.
 
 ## Rules
@@ -24,12 +24,15 @@ Owns application wiring only:
 
 ```text
 /admin/login
+/admin/access-denied
 /admin/surveys
 /admin/surveys/new
 /admin/surveys/:surveyId/dashboard
 /admin/surveys/:surveyId/builder
 /admin/surveys/:surveyId/preview
-/admin/surveys/:surveyId/responses
 /admin/surveys/:surveyId/analysis
-/admin/surveys/:surveyId/report
+/admin/surveys/:surveyId/settings
+*
 ```
+
+Use `src/view/admin/system/AdminAccessDeniedPage.tsx` and `src/view/admin/system/AdminNotFoundPage.tsx` for denied and unmatched admin routes.

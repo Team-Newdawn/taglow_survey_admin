@@ -15,4 +15,4 @@ Owns admin use-case contracts and implementations.
 - Do not return raw rows/DTOs.
 - Do not import TanStack Query.
 - Avoid UI decisions. Return enough structured data for views to render states.
-- Keep method names aligned with the TDD contract: list surveys, create survey, preview, publish, analysis, heatmap, and report/export commands.
+- Keep method names aligned with the TDD v2 contract: current admin, surveys, section/question reorder, image upload, publish validation, next version, preview survey, filter options, section satisfaction summary, Borich, heatmap, and text answers.

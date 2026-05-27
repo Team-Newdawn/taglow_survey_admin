@@ -12,8 +12,8 @@ Owns route-level views and feature UI.
 
 ## CSS Ownership
 
-- Keep route/page CSS in the same feature directory as the page, for example `SurveyBuilderPage.tsx` with `SurveyBuilderPage.css`.
-- Keep feature component CSS inside that feature's `components` directory, next to the component, for example `components/QuestionEditor.tsx` with `components/QuestionEditor.css`.
+- Keep route/page CSS in the feature `css` directory, for example `builder/css/SurveyBuilderPage.css`.
+- Keep feature component CSS inside that feature's `components/css` directory, for example `builder/components/css/QuestionEditorPanel.css`.
 - Page CSS owns page shell, route layout, responsive page grid, and spacing between page regions.
 - Component CSS owns only that component's internal layout, states, and variants.
 - Do not put feature-specific CSS in `src/components/css`; reserve that path for shared tokens, resets, and generic component styles.

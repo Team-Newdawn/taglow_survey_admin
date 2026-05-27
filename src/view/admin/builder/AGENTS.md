@@ -23,5 +23,6 @@ Owns survey, section, question, multilingual, branching, and asset editing.
 - Every question should expose analysis metadata where possible: `metricType`, `topicKey`, `spaceKey`.
 - Never compare Korean/English labels to drive branching. Use stable values.
 - Protect structural edits after responses exist; guide to version creation.
-- Keep page-level CSS next to builder page files, for example `SurveyBuilderPage.css`.
+- Use TDD v2 config key names (`scaleMin`, `labelsKo`, `assetId`, `expectedValue`, etc.) at the domain boundary.
+- Keep page-level CSS in `src/view/admin/builder/css`, for example `SurveyBuilderPage.css`.
 - Page CSS owns builder shell layout such as left panel, editor column, preview area, and route-level responsive behavior.

@@ -11,7 +11,7 @@ user-invocable: true
 ## Read First
 
 ```sh
-rg -n "설문 생성|설문 버전|섹션 기반 설문 빌더|질문 빌더|경험 여부|낮은 만족도|선택형 우선|다국어|이미지/도면|Builder" dev/Taglow_Survey_Admin_PRD.md dev/Taglow_survey_Admin_TDD.md
+rg -n "설문 빌더|섹션 빌더|질문 빌더|질문 유형별 Config|Publish 후 구조 보호|createNextVersion" dev/Taglow_Survey_Admin_PRD.md dev/Taglow_survey_Admin_TDD_v2.md
 ```
 
 ## UI Shape
@@ -21,11 +21,11 @@ Prefer the TDD structure unless existing code has a stronger local convention:
 ```text
 SurveyBuilderPage
   SectionListPanel
+  SectionEditorPanel
   QuestionListPanel
-  QuestionEditor
-  QuestionTypePicker
-  MultilingualTextFields
-  AssetPicker
+  QuestionEditorPanel
+  ImageAssetPanel
+  PublishChecklistPanel
 ```
 
 Views use query hooks and stores only. They never call Supabase directly.
@@ -54,13 +54,14 @@ answer_type/question_type
 
 Required config patterns:
 
-- `scale`: min/max, labels, metric_type, optional low-score followup threshold and reason options.
-- `single_choice` / `multi_select`: stable option values, `label_ko`, optional `label_en`, allow_other, min/max select.
+- `scale`: `scaleMin`, `scaleMax`, `labelsKo`, `labelsEn`.
+- `single_choice`: `options[].value`, `labelKo`, `labelEn`.
+- `multi_select`: `minSelect`, `maxSelect`, stable options.
 - `experience`: experience states, followup visibility rules, awareness/no-use categories.
 - `text`: optional category/topic linkage and length validation.
 - `ranking`: stable option values and rank limits.
-- `image_tag`: `asset_id`, max tags, tag types, require_text, enable_zoom.
-- `attention_check`: expected answer and validation messaging.
+- `image_tag`: `assetId`, `maxTags`, `tagTypes`, `requireText`, `enableZoom`.
+- `attention_check`: `expectedValue`, `excludeIfFailed`.
 
 ## Multilingual Rules
 
@@ -83,13 +84,13 @@ Must support:
 
 - Draft with no responses: editable.
 - Published or has responses: protect destructive structural edits such as deleting questions or changing question type.
-- If structural changes are needed, guide to `createSurveyVersion`.
+- If structural changes are needed, guide to `createNextVersion`.
 - Analysis reads a specific survey version unless explicitly aggregating a `version_group_id`.
 
 ## Asset Rules
 
-- Upload through storage gateway, then create `survey_assets`.
-- Link image_tag questions by `config.asset_id`.
+- Upload through storage gateway, then create `survey_assets` with `storageBucket` and `storagePath`.
+- Link image_tag questions by `config.assetId`.
 - Validate missing/deleted assets before publish.
 
 ## Tests

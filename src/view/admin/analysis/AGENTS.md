@@ -5,14 +5,12 @@ Owns the analysis workbench.
 ## Responsibilities
 
 - Global Filter Bar.
-- Improvement Priority TOP 5.
+- Response summary.
 - Section averages.
-- Question averages and gaps.
 - Group comparisons.
 - Borich and Locus cards.
-- Text opinion list/groups.
 - Image tagging heatmap.
-- Evidence panels.
+- Text answer table.
 
 ## Rules
 
@@ -22,5 +20,6 @@ Owns the analysis workbench.
 - Every card should display N, active filters, and low-N warnings when available.
 - Heatmap rendering must use normalized `x_ratio/y_ratio`.
 - AI summaries must show representative original evidence.
-- Keep page-level CSS next to analysis page files, for example `AnalysisWorkbenchPage.css`.
+- Use the v2 analysis query set: filter options, section satisfaction summary, Borich summary, heatmap points, and text answers.
+- Keep page-level CSS in `src/view/admin/analysis/css`, for example `SurveyAnalysisPage.css`.
 - Page CSS owns workbench grid, sticky Global Filter Bar position, tab layout, and card region spacing.

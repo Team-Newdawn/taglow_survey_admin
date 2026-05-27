@@ -11,7 +11,7 @@ user-invocable: true
 ## Read First
 
 ```sh
-rg -n "참여자 화면 미리보기|게시 전 검증|미리보기 URL|분기 조건 미리보기|이미지 태깅 미리보기|배포 관리|Publish|Preview" dev/Taglow_Survey_Admin_PRD.md dev/Taglow_survey_Admin_TDD.md
+rg -n "참여자 미리보기|Publish 정책|Publish 전 검증|Publish 후 구조 보호|SurveyPreviewPage|createNextVersion" dev/Taglow_Survey_Admin_PRD.md dev/Taglow_survey_Admin_TDD_v2.md
 ```
 
 ## URL Contract
@@ -52,8 +52,10 @@ Publish validation should report actionable items:
 - Scale question without valid range/labels.
 - Image_tag without valid asset.
 - Branch condition points to missing question/value.
-- Duplicate or missing `public_slug`.
-- Required question lacks validation rules where needed.
+- Duplicate `public_slug`.
+- Duplicate question keys.
+- Attention check without `expectedValue`.
+- Profile required fields not mapped to response profile columns.
 
 ## Branch Simulation
 
@@ -86,6 +88,7 @@ validatePublish
 ```
 
 Close flow sets `status=closed` and `closed_at`; public response submission must stop.
+Published/closed/archived survey structure is DB-locked for `survey_sections`, `questions`, and `survey_assets`; structural changes create the next version.
 
 ## Tests
 

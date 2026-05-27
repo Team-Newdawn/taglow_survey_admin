@@ -11,7 +11,7 @@ user-invocable: true
 ## Read First
 
 ```sh
-rg -n "응답 현황|Global Filter Bar|분석 워크벤치|개선 우선순위|Borich|Locus|집단 비교|주관식|히트맵|응답 부족|보고서" dev/Taglow_Survey_Admin_PRD.md dev/Taglow_survey_Admin_TDD.md
+rg -n "분석 API|Filter Options|Section Satisfaction Summary|Borich Summary|Heatmap Points|Text Answers|SurveyAnalysisPage" dev/Taglow_Survey_Admin_PRD.md dev/Taglow_survey_Admin_TDD_v2.md
 ```
 
 ## Data Source Rules
@@ -43,15 +43,13 @@ Also show before/after response counts when available. Presets are Should, not M
 
 Implement through query hooks that call `AdminApiController`:
 
-- Response summary: total submitted, recent response counts, profile distribution, section/question response rates.
-- Section average: satisfaction average and N by section.
-- Question average: satisfaction/importance/gap by question/topic.
-- Priority TOP 5: transparent combination of low satisfaction, high importance, gap, Borich, text frequency, tag density, severity, and N.
-- Group compare: average and N by gender/semester/department/rc/dormitory/room_type.
-- Borich: `avg_importance * (avg_importance - avg_satisfaction)`.
-- Locus: 4-quadrant classification by mean importance/satisfaction baseline.
-- Text groups: grouped issue category, frequency, representative originals, search.
-- Heatmap: image asset, normalized coordinates, tag type/severity/text, filter-aware.
+- `ResponseSummaryCard`: response count and readiness context on the analysis page.
+- `SectionAverageCard`: data from `get_section_satisfaction_summary`.
+- `GroupCompareCard`: comparison UI when data is available through analysis queries.
+- `BorichCard`: data from `get_borich_summary`.
+- `LocusCard`: quadrant view derived from satisfaction/importance summaries when scoped.
+- `HeatmapCard`: data from `get_heatmap_points`.
+- `TextAnswerTable`: data from `listTextAnswers`.
 
 ## Text/AI Summary Rules
 
@@ -61,7 +59,7 @@ AI summaries are evidence-linked, not standalone truth. Always provide:
 - source count,
 - representative originals,
 - full original list access,
-- report inclusion state.
+- inclusion state only when a future report/poster workflow is explicitly scoped.
 
 Allow manual rename/merge/split/exclude only when that feature is in scope.
 
@@ -74,18 +72,7 @@ Allow manual rename/merge/split/exclude only when that feature is in scope.
 
 ## Report/Export Rules
 
-MVP export target is Markdown first. PNG/PDF/Excel are Should unless requested.
-
-Report cards should preserve:
-
-- title,
-- metric values,
-- active filters,
-- N and low-N warning,
-- evidence links or representative originals,
-- generated summary if present.
-
-Do not add saved report tables unless the user asks for persistent reports.
+TDD v2 does not define a report route. Treat report/poster draft as PRD future scope unless the user explicitly asks for it.
 
 ## Tests
 
@@ -100,4 +87,4 @@ Cover:
 
 ## Subagent
 
-For formula/SQL/report correctness review, use `.codex/agents/taglow-admin-analysis-auditor.toml`.
+For formula/SQL/RPC correctness review, use `.codex/agents/taglow-admin-analysis-auditor.toml`.

@@ -11,7 +11,7 @@ If present, read `./.omd/preferences.md` — pending corrections not yet folded 
 ## Source Of Truth
 
 - Product requirements: `dev/Taglow_Survey_Admin_PRD.md`
-- Technical design: `dev/Taglow_survey_Admin_TDD.md`
+- Technical design: `dev/Taglow_survey_Admin_TDD_v2.md`
 
 When product behavior and implementation details conflict, preserve the PRD outcome and update the implementation to keep the TDD boundary rules intact.
 
@@ -21,13 +21,13 @@ Taglow Survey Admin is not a generic form builder. It is a survey analysis workb
 
 ```text
 admin auth
+-> admin_members permission check
 -> survey/section/question builder
 -> participant preview
 -> publish URL/QR
--> response status
 -> global filters
 -> analysis cards
--> report draft/export
+-> report/poster draft when later scoped
 ```
 
 MVP scope is the PRD/TDD Must items. Treat Should/Could items as explicit opt-in work unless the user asks for them.
@@ -55,12 +55,14 @@ Rules:
 - Controllers return domain models.
 - Stores keep client/UI state only, not server response copies.
 - Preview mode must never create `responses` or `answers`.
+- Admin access is backed by `admin_members`, not a frontend-only email list.
 
 ## Core Data Model
 
-Keep the MVP database centered on:
+Keep the v2 database centered on one permission table and six product tables:
 
 ```text
+admin_members
 surveys
 survey_sections
 questions
@@ -69,7 +71,7 @@ responses
 answers
 ```
 
-Do not introduce workspace/member/report snapshot/analysis result tables unless the user explicitly moves beyond MVP scope.
+Do not introduce workspace tables, report snapshot tables, or saved analysis result tables unless the user explicitly moves beyond the v2 scope.
 
 ## React Stack
 
@@ -101,5 +103,6 @@ Add or update tests at the closest useful layer:
 - store tests for UI state transitions,
 - view tests for loading/empty/error/success and form behavior,
 - E2E tests for auth, builder, preview, publish, and analysis flows.
+- database policy tests for `admin_members`, viewer/admin/participant RLS, and publish structure locks.
 
 Before handoff, report which checks ran and which were skipped.

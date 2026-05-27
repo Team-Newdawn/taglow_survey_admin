@@ -6,6 +6,6 @@ Owns reusable auth UI pieces.
 
 - Components should be presentational or receive explicit callback props.
 - Do not call Supabase directly.
-- Keep copy clear about account/domain/allowlist failure without leaking security internals.
-- Keep each component's CSS beside the component file.
+- Keep copy clear about account/domain/admin-member failure without leaking security internals.
+- Keep each component's CSS in `src/view/admin/auth/components/css`.
 - Component CSS must not rely on page-level auth classes.

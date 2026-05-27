@@ -10,7 +10,7 @@ Owns admin participant-preview pages.
 - Mobile/desktop device switch.
 - Branch simulation.
 - Image tagging preview.
-- Publish validation panel.
+- Scenario selection.
 
 ## Rules
 
@@ -19,5 +19,5 @@ Owns admin participant-preview pages.
 - Reuse participant rendering components when they exist.
 - Show warnings for missing multilingual text, missing options, missing assets, and invalid branch conditions.
 - Image tag preview must preserve aspect ratio and use normalized coordinates.
-- Keep page-level CSS next to preview page files, for example `SurveyPreviewPage.css`.
+- Keep page-level CSS in `src/view/admin/preview/css`, for example `SurveyPreviewPage.css`.
 - Page CSS owns preview route layout, toolbar placement, device-frame region, and validation side/bottom panel composition.
