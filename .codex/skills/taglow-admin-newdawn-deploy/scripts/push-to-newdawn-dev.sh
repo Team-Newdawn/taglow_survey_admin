@@ -3,7 +3,7 @@ set -euo pipefail
 
 EXPECTED_ORIGIN="https://github.com/minchanpark/taglow_survey_admin.git"
 TEAM_REMOTE="team-newdawn"
-TEAM_URL="https://github.com/Team-Newdawn/tallow_survey_admin.git"
+TEAM_URL="https://github.com/Team-Newdawn/taglow_survey_admin.git"
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -44,5 +44,5 @@ echo "Pushed $commit_hash to $TEAM_REMOTE/dev."
 
 if command -v gh >/dev/null 2>&1; then
   echo "Open PRs from dev to main:"
-  gh pr list --repo Team-Newdawn/tallow_survey_admin --base main --head dev || true
+  gh pr list --repo Team-Newdawn/taglow_survey_admin --base main --head dev || true
 fi

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="Team-Newdawn/tallow_survey_admin"
+REPO="Team-Newdawn/taglow_survey_admin"
 TEAM_REMOTE="team-newdawn"
-TEAM_URL="https://github.com/Team-Newdawn/tallow_survey_admin.git"
+TEAM_URL="https://github.com/Team-Newdawn/taglow_survey_admin.git"
 BASE_BRANCH="main"
 HEAD_BRANCH="dev"
 SHOULD_MERGE=0
