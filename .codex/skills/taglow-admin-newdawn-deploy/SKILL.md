@@ -1,19 +1,19 @@
 ---
 name: taglow-admin-newdawn-deploy
-description: "Team-Newdawn/tallow_survey_admin 배포 저장소로 dev 브랜치를 올리고 dev -> main PR 배포 흐름을 운영할 때 사용. origin/minchanpark 기본 연결은 유지하면서 team-newdawn remote, GitHub Actions 배포 브랜치, PR 생성/확인 작업에 사용."
+description: "Team-Newdawn/taglow_survey_admin 배포 저장소로 dev 브랜치를 올리고 dev -> main PR 배포 흐름을 운영할 때 사용. origin/minchanpark 기본 연결은 유지하면서 team-newdawn remote, GitHub Actions 배포 브랜치, PR 생성/확인 작업에 사용."
 user-invocable: true
 ---
 
-# taglow-admin:newdawn-deploy
+# taglow-admin-newdawn-deploy
 
-이 스킬은 Taglow Survey Admin을 서버 배포용 저장소인 `Team-Newdawn/tallow_survey_admin`의 `dev` 브랜치로 올릴 때 사용한다. 로컬/VSCode의 기본 Git 연결은 `origin = minchanpark/taglow_survey_admin`로 유지한다.
-  
+이 스킬은 Taglow Survey Admin을 서버 배포용 저장소인 `Team-Newdawn/taglow_survey_admin`의 `dev` 브랜치로 올릴 때 사용한다. 로컬/VSCode의 기본 Git 연결은 `origin = minchanpark/taglow_survey_admin`로 유지한다.
+
 ## Remote Rules
 
 - 기본 개발 remote는 항상 `origin`이다.
 - `origin`은 `https://github.com/minchanpark/taglow_survey_admin.git`이어야 한다.
 - 배포 remote는 `team-newdawn`이다.
-- `team-newdawn`은 `https://github.com/Team-Newdawn/tallow_survey_admin.git`이어야 한다.
+- `team-newdawn`은 `https://github.com/Team-Newdawn/taglow_survey_admin.git`이어야 한다.
 - Team-Newdawn 배포는 upstream tracking에 의존하지 말고 명시적으로 `git push team-newdawn HEAD:dev`를 사용한다.
 - `main`에 직접 push하지 않는다. `dev -> main` PR merge 후 서버 GitHub Actions가 배포한다.
 

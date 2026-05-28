@@ -1,12 +1,12 @@
 ---
 name: taglow-admin-newdawn-release
-description: "Team-Newdawn/tallow_survey_admin에서 dev -> main Pull Request를 만들고, 사용자가 명시적으로 요청한 경우에만 merge하여 GitHub Actions 배포를 트리거할 때 사용. main 직접 push 없이 PR 기반 릴리즈를 운영한다."
+description: "Team-Newdawn/taglow_survey_admin에서 dev -> main Pull Request를 만들고, 사용자가 명시적으로 요청한 경우에만 merge하여 GitHub Actions 배포를 트리거할 때 사용. main 직접 push 없이 PR 기반 릴리즈를 운영한다."
 user-invocable: true
 ---
 
 # taglow-admin-newdawn-release
 
-이 스킬은 배포 저장소 `Team-Newdawn/tallow_survey_admin`에서 `dev -> main` Pull Request를 열고, 필요 시 merge해서 서버 GitHub Actions 배포를 시작할 때 사용한다.
+이 스킬은 배포 저장소 `Team-Newdawn/taglow_survey_admin`에서 `dev -> main` Pull Request를 열고, 필요 시 merge해서 서버 GitHub Actions 배포를 시작할 때 사용한다.
 
 ## Guardrails
 
@@ -45,19 +45,19 @@ git log --oneline team-newdawn/main..team-newdawn/dev
 3. PR을 만든다.
 
 ```sh
-gh pr create --repo Team-Newdawn/tallow_survey_admin --base main --head dev
+gh pr create --repo Team-Newdawn/taglow_survey_admin --base main --head dev
 ```
 
 4. merge 요청이 명시된 경우에만 merge한다.
 
 ```sh
-gh pr merge --repo Team-Newdawn/tallow_survey_admin <PR_NUMBER> --merge
+gh pr merge --repo Team-Newdawn/taglow_survey_admin <PR_NUMBER> --merge
 ```
 
 5. merge 후 GitHub Actions 상태를 확인한다.
 
 ```sh
-gh run list --repo Team-Newdawn/tallow_survey_admin --branch main --limit 5
+gh run list --repo Team-Newdawn/taglow_survey_admin --branch main --limit 5
 ```
 
 ## Handoff
