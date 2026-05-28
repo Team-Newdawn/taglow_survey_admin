@@ -45,6 +45,18 @@ const rawSection: RawSection = {
 };
 
 describe("GatewayBackedAdminApiController question updates", () => {
+  it("forwards draft survey deletes to the gateway boundary", async () => {
+    const deleteDraftSurvey = vi.fn(async () => undefined);
+    const controller = new GatewayBackedAdminApiController(
+      { deleteDraftSurvey } as unknown as AdminApiGateway,
+      {} as AdminStorageGateway,
+    );
+
+    await controller.deleteDraftSurvey("survey-1");
+
+    expect(deleteDraftSurvey).toHaveBeenCalledWith("survey-1");
+  });
+
   it("normalizes public slug clears and public code casing for survey updates", async () => {
     const updateSurvey = vi.fn(
       async (args: { surveyId: string; payload: RawUpdateSurveyPayload }): Promise<RawSurvey> => ({

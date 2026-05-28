@@ -40,7 +40,7 @@
 
 .tg-survey-list-page__row {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 112px 128px 80px 120px 92px;
+  grid-template-columns: minmax(220px, 1fr) 112px 128px 80px 120px 160px;
   min-height: 56px;
   align-items: center;
   gap: var(--tg-space-8);
@@ -103,6 +103,7 @@
 
 .tg-survey-list-page__actions {
   display: flex;
+  gap: var(--tg-space-4);
   justify-content: flex-end;
 }
 
@@ -125,6 +126,29 @@
 
 .tg-survey-list-page__edit-link:hover {
   background: var(--tg-bg-inset);
+}
+
+.tg-survey-list-page__delete-button {
+  min-height: 32px;
+  padding: 0 var(--tg-space-5);
+  font-size: var(--tg-font-size-caption);
+  line-height: var(--tg-line-caption);
+}
+
+.tg-survey-list-page__feedback {
+  margin: 0;
+  border: 1px solid var(--tg-border-subtle);
+  border-radius: var(--tg-radius-sm);
+  padding: var(--tg-space-7) var(--tg-space-8);
+  color: var(--tg-text-body);
+  background: var(--tg-bg-panel);
+  font-size: var(--tg-font-size-dense);
+  line-height: var(--tg-line-dense);
+}
+
+.tg-survey-list-page__feedback--danger {
+  border-color: var(--tg-danger);
+  color: var(--tg-danger);
 }
 
 @media (max-width: 780px) {

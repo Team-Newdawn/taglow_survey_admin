@@ -1,12 +1,29 @@
-import { PencilLine, Plus, RefreshCcw } from "lucide-react";
+import { PencilLine, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getSurveyPublicIdentifier } from "../../../api/admin/model";
-import { useSurveysQuery } from "../../../api/admin/query";
+import { getSurveyPublicIdentifier, type Survey } from "../../../api/admin/model";
+import { useDeleteDraftSurveyMutation, useSurveysQuery } from "../../../api/admin/query";
 import { Button, EmptyState, ErrorState, LoadingState, SurveyStatusBadge } from "../../../components";
 import "./css/SurveyListPage.css";
 
 export function SurveyListPage() {
   const surveysQuery = useSurveysQuery();
+  const deleteDraftSurveyMutation = useDeleteDraftSurveyMutation();
+
+  const handleDeleteSurvey = (survey: Survey) => {
+    if (survey.status !== "draft") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `"${survey.title}" 초안 설문을 삭제할까요?\n삭제한 설문과 연결된 섹션/질문은 복구할 수 없습니다.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    deleteDraftSurveyMutation.mutate(survey.id);
+  };
 
   return (
     <section className="tg-survey-list-page" aria-labelledby="survey-list-title">
@@ -32,6 +49,18 @@ export function SurveyListPage() {
           onAction={() => void surveysQuery.refetch()}
           icon={<RefreshCcw size={18} aria-hidden="true" />}
         />
+      ) : null}
+
+      {deleteDraftSurveyMutation.isError ? (
+        <p className="tg-survey-list-page__feedback tg-survey-list-page__feedback--danger" role="alert">
+          설문을 삭제하지 못했습니다. 초안 상태와 관리자 권한을 확인한 뒤 다시 시도해주세요.
+        </p>
+      ) : null}
+
+      {deleteDraftSurveyMutation.isSuccess ? (
+        <p className="tg-survey-list-page__feedback" role="status">
+          설문이 삭제되었습니다.
+        </p>
       ) : null}
 
       {surveysQuery.isSuccess && surveysQuery.data.length === 0 ? (
@@ -77,6 +106,20 @@ export function SurveyListPage() {
                   <PencilLine size={15} aria-hidden="true" />
                   <span>수정</span>
                 </Link>
+                <Button
+                  className="tg-survey-list-page__delete-button"
+                  variant="danger"
+                  icon={<Trash2 size={15} aria-hidden="true" />}
+                  aria-label={`${survey.title} 삭제`}
+                  disabled={
+                    survey.status !== "draft" ||
+                    (deleteDraftSurveyMutation.isPending && deleteDraftSurveyMutation.variables === survey.id)
+                  }
+                  title={survey.status === "draft" ? undefined : "초안 상태의 설문만 삭제할 수 있습니다."}
+                  onClick={() => handleDeleteSurvey(survey)}
+                >
+                  {deleteDraftSurveyMutation.isPending && deleteDraftSurveyMutation.variables === survey.id ? "삭제 중" : "삭제"}
+                </Button>
               </span>
             </div>
           ))}
