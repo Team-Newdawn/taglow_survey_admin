@@ -37,7 +37,7 @@ export type SurveyDetail = Readonly<{
 }>;
 
 export function getSurveyPublicIdentifier(survey: Pick<Survey, "publicSlug" | "publicCode">): string | undefined {
-  return survey.publicSlug ?? survey.publicCode;
+  return survey.publicSlug?.trim() || survey.publicCode?.trim() || undefined;
 }
 
 export function getSurveyPublicPath(survey: Pick<Survey, "publicSlug" | "publicCode">): string | undefined {

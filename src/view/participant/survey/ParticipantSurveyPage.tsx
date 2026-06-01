@@ -8,42 +8,32 @@ import {
   useParticipantSurveyQuery,
   useSubmitSurveyResponseMutation,
 } from "../../../api/participant/query";
-import type { JsonRecord, ParticipantSurvey, Question, SubmitSurveyResponseCommand, SubmitSurveyResponseResult, SurveyAsset, SurveySection } from "../../../api/participant/model";
+import {
+  getAnswerSections,
+  getAssetUrl,
+  getChoiceOptions,
+  getConfiguredAssetId,
+  getMaxSelect,
+  getMaxTags,
+  getNumber,
+  getQuestionKind,
+  getScaleBounds,
+  getScaleLabels,
+  getString,
+  getStringArray,
+  getTagTypes,
+  groupQuestionsBySection,
+  isIntroSection,
+  ratioFromPoint,
+  shouldShowQuestion,
+  sortByOrder,
+  toRecord,
+} from "../../../api/admin/model";
+import type { JsonRecord, ParticipantSurvey, Question, SubmitSurveyResponseResult, SurveyAsset, SurveySection } from "../../../api/participant/model";
 import { Button, EmptyState, ErrorState, LoadingState } from "../../../components";
+import { buildSubmitSurveyResponseCommand } from "./participantSubmission";
+import type { ChoiceTextAnswer, ImageTagAnswer, ImageTagPin, ParticipantAnswer, ParticipantAnswers, ParticipantFlowStep } from "./participantSurveyTypes";
 import "./css/ParticipantSurveyPage.css";
-
-type ParticipantFlowStep = Readonly<
-  | { type: "login" }
-  | { type: "intro" }
-  | { type: "section"; sectionIndex: number }
-  | { type: "complete" }
->;
-type ParticipantAnswer = number | string | string[] | ChoiceTextAnswer | ImageTagAnswer | undefined;
-type ParticipantAnswers = Record<string, ParticipantAnswer>;
-type ChoiceOption = Readonly<{
-  value: string;
-  labelKo: string;
-  labelEn?: string;
-}>;
-type ChoiceTextAnswer = Readonly<{
-  choiceValue?: string;
-  text?: string;
-}>;
-type ImageTagAnswer = Readonly<{
-  image?: {
-    storageBucket: string;
-    storagePath: string;
-    signedUrl?: string;
-  };
-  tags: ImageTagPin[];
-}>;
-type ImageTagPin = Readonly<{
-  id: string;
-  xRatio: number;
-  yRatio: number;
-  tagType?: string;
-  text?: string;
-}>;
 
 export function ParticipantSurveyPage() {
   const { publicIdentifier = "" } = useParams();
@@ -61,12 +51,13 @@ export function ParticipantSurveyPage() {
     () => groupQuestionsBySection(surveyQuery.data?.questions ?? []),
     [surveyQuery.data?.questions],
   );
+  const allQuestions = surveyQuery.data?.questions ?? [];
   const sortedSections = useMemo(
-    () => [...(surveyQuery.data?.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex),
+    () => sortByOrder(surveyQuery.data?.sections ?? []),
     [surveyQuery.data?.sections],
   );
   const introSection = sortedSections.find(isIntroSection);
-  const answerSections = sortedSections.filter((section) => !isIntroSection(section));
+  const answerSections = useMemo(() => getAnswerSections(sortedSections), [sortedSections]);
   const currentSectionIndex = step.type === "section" ? Math.min(step.sectionIndex, Math.max(answerSections.length - 1, 0)) : 0;
   const currentSection = answerSections[currentSectionIndex];
 
@@ -127,7 +118,7 @@ export function ParticipantSurveyPage() {
             <ParticipantIntroStep
               survey={surveyQuery.data.survey}
               introSection={introSection}
-              introQuestions={introSection ? questionsBySection.get(introSection.id) ?? [] : []}
+              introQuestions={introSection ? getVisibleQuestions(questionsBySection.get(introSection.id) ?? [], allQuestions, answers) : []}
               assets={surveyQuery.data.assets}
               answers={answers}
               onAnswerChange={(questionId, answer) => setAnswers((current) => ({ ...current, [questionId]: answer }))}
@@ -145,7 +136,7 @@ export function ParticipantSurveyPage() {
               section={currentSection}
               sectionIndex={currentSectionIndex}
               sectionCount={answerSections.length}
-              questions={questionsBySection.get(currentSection.id) ?? []}
+              questions={getVisibleQuestions(questionsBySection.get(currentSection.id) ?? [], allQuestions, answers)}
               assets={surveyQuery.data.assets}
               answers={answers}
               onAnswerChange={(questionId, answer) => setAnswers((current) => ({ ...current, [questionId]: answer }))}
@@ -184,6 +175,10 @@ export function ParticipantSurveyPage() {
       ) : null}
     </main>
   );
+}
+
+function getVisibleQuestions(questions: Question[], allQuestions: Question[], answers: ParticipantAnswers): Question[] {
+  return questions.filter((question) => shouldShowQuestion({ question, questions: allQuestions, values: answers }));
 }
 
 function ParticipantLoginStep(props: {
@@ -446,7 +441,7 @@ function QuestionView(props: {
   answer: ParticipantAnswer;
   onAnswerChange: (answer: ParticipantAnswer) => void;
 }) {
-  const questionKind = getParticipantQuestionKind(props.question);
+  const questionKind = getQuestionKind(props.question);
   return (
     <li className="tg-participant-question">
       <div className="tg-participant-question__header">
@@ -496,10 +491,8 @@ function ScaleQuestionControl(props: {
   answer: ParticipantAnswer;
   onAnswerChange: (answer: ParticipantAnswer) => void;
 }) {
-  const config = toRecord(props.question.config);
-  const min = getNumber(config.scaleMin) ?? 1;
-  const max = getNumber(config.scaleMax) ?? 5;
-  const labels = getStringArray(config.labelsKo);
+  const { min, max } = getScaleBounds(props.question);
+  const labels = getScaleLabels(props.question, "ko");
   const values = Array.from({ length: Math.max(1, max - min + 1) }, (_, index) => min + index);
 
   return (
@@ -552,7 +545,7 @@ function MultiSelectQuestionControl(props: {
 }) {
   const options = getChoiceOptions(props.question.config);
   const selected = Array.isArray(props.answer) ? props.answer.filter((value): value is string => typeof value === "string") : [];
-  const maxSelect = getNumber(toRecord(props.question.config).maxSelect);
+  const maxSelect = getMaxSelect(props.question);
 
   return (
     <div className="tg-participant-choice-list">
@@ -657,13 +650,12 @@ function ImageTagQuestionControl(props: {
   answer: ParticipantAnswer;
   onAnswerChange: (answer: ParticipantAnswer) => void;
 }) {
-  const config = toRecord(props.question.config);
-  const assetId = getString(config.assetId) ?? getString(config.asset_id);
+  const assetId = getConfiguredAssetId(props.question);
   const asset = props.assets.find((item) => item.id === assetId);
   const imageUrl = getAssetUrl(asset);
   const answer = isImageTagAnswer(props.answer) ? props.answer : { tags: [] };
-  const maxTags = getNumber(config.maxTags) ?? 3;
-  const tagTypes = getStringArray(config.tagTypes);
+  const maxTags = getMaxTags(props.question);
+  const tagTypes = getTagTypes(props.question);
 
   return (
     <ImageTagSurface
@@ -688,8 +680,8 @@ function ParticipantImageTagQuestionControl(props: {
   const uploadMutation = useParticipantQuestionImageUploadMutation();
   const config = toRecord(props.question.config);
   const answer = isImageTagAnswer(props.answer) ? props.answer : { tags: [] };
-  const tagTypes = getStringArray(config.tagTypes);
-  const maxTags = getNumber(config.maxTags) ?? 3;
+  const tagTypes = getTagTypes(props.question);
+  const maxTags = getMaxTags(props.question);
   const acceptedMimeTypes = getStringArray(config.acceptedMimeTypes);
   const accept = acceptedMimeTypes.length ? acceptedMimeTypes.join(",") : "image/*";
 
@@ -810,212 +802,6 @@ function ImageTagSurface(props: {
   );
 }
 
-function groupQuestionsBySection(questions: Question[]): Map<string, Question[]> {
-  const grouped = new Map<string, Question[]>();
-  for (const question of [...questions].sort((a, b) => a.orderIndex - b.orderIndex)) {
-    const items = grouped.get(question.sectionId) ?? [];
-    items.push(question);
-    grouped.set(question.sectionId, items);
-  }
-  return grouped;
-}
-
-function isIntroSection(section: SurveySection): boolean {
-  return section.sectionType === "intro" || section.sectionKey.toLowerCase().includes("intro");
-}
-
-function getChoiceOptions(config: JsonRecord): ChoiceOption[] {
-  const rawOptions = Array.isArray(config.options) ? config.options : [];
-  return rawOptions
-    .map((option, index) => {
-      if (typeof option === "string" && option.trim()) return { value: `option_${index + 1}`, labelKo: option.trim() };
-      if (isRecord(option)) {
-        const label = option.label;
-        const value = typeof option.value === "string" && option.value.trim() ? option.value : `option_${index + 1}`;
-        const labelKo =
-          typeof option.labelKo === "string" && option.labelKo.trim()
-            ? option.labelKo
-            : isRecord(label) && typeof label.ko === "string" && label.ko.trim()
-              ? label.ko
-              : typeof label === "string" && label.trim()
-                ? label
-                : value;
-        const labelEn = typeof option.labelEn === "string" ? option.labelEn : undefined;
-        return labelEn ? { value, labelKo, labelEn } : { value, labelKo };
-      }
-      return undefined;
-    })
-    .filter((option): option is ChoiceOption => Boolean(option));
-}
-
-function toRecord(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function getString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function getNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function getStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
-}
-
-function getAssetUrl(asset: SurveyAsset | undefined): string | undefined {
-  if (!asset) return undefined;
-  return getString(asset.metadata.signedUrl) ?? getString(asset.metadata.publicUrl) ?? getString(asset.metadata.public_url);
-}
-
-function buildSubmitSurveyResponseCommand(args: {
-  surveyId: string;
-  clientSubmissionId: string;
-  startedAt: string;
-  questions: Question[];
-  answers: ParticipantAnswers;
-}): SubmitSurveyResponseCommand {
-  const submittedAnswers = args.questions.flatMap((question) => toSubmittedAnswers(question, args.answers[question.id]));
-  const profile = buildSubmittedProfile(args.questions, args.answers);
-
-  return {
-    surveyId: args.surveyId,
-    clientSubmissionId: args.clientSubmissionId,
-    locale: "ko",
-    startedAt: args.startedAt,
-    profile,
-    rawPayload: {
-      profile,
-      answeredQuestionIds: submittedAnswers.map((answer) => answer.questionId),
-    },
-    answers: submittedAnswers,
-  };
-}
-
-function toSubmittedAnswers(question: Question, answer: ParticipantAnswer): SubmitSurveyResponseCommand["answers"] {
-  if (answer === undefined) return [];
-  const base = {
-    questionId: question.id,
-    sectionId: question.sectionId,
-    answerType: question.questionType,
-    metricType: question.metricType ?? "none",
-    topicKey: question.topicKey,
-    spaceKey: question.spaceKey,
-  };
-
-  if (typeof answer === "number") {
-    return [{ ...base, scoreValue: answer, valueJson: { value: answer } }];
-  }
-
-  if (typeof answer === "string") {
-    const questionKind = getParticipantQuestionKind(question);
-    if (questionKind === "single_choice" || question.questionType === "profile" || question.questionType === "experience") {
-      return [{ ...base, choiceValue: answer, valueJson: { value: answer } }];
-    }
-    return [{ ...base, textValue: answer, valueJson: { value: answer } }];
-  }
-
-  if (Array.isArray(answer)) {
-    return answer.map((value) => ({ ...base, choiceValue: value, valueJson: { value, selectedValues: answer } }));
-  }
-
-  if (isChoiceTextAnswer(answer)) {
-    return [
-      {
-        ...base,
-        choiceValue: answer.choiceValue,
-        textValue: answer.text,
-        valueJson: compactJsonRecord({
-          choiceValue: answer.choiceValue,
-          text: answer.text,
-        }),
-      },
-    ];
-  }
-
-  if (isImageTagAnswer(answer)) {
-    const config = toRecord(question.config);
-    const configuredAssetId = getString(config.assetId) ?? getString(config.asset_id);
-    return answer.tags.map((tag) => ({
-      ...base,
-      assetId: configuredAssetId,
-      xRatio: tag.xRatio,
-      yRatio: tag.yRatio,
-      tagType: tag.tagType,
-      textValue: tag.text,
-      valueJson: compactJsonRecord({
-        tagId: tag.id,
-        image: answer.image
-          ? {
-              storageBucket: answer.image.storageBucket,
-              storagePath: answer.image.storagePath,
-            }
-          : undefined,
-      }),
-    }));
-  }
-
-  return [];
-}
-
-function buildSubmittedProfile(questions: Question[], answers: ParticipantAnswers): JsonRecord {
-  const profile: JsonRecord = {};
-  for (const question of questions) {
-    if (question.questionType !== "profile") continue;
-    const config = toRecord(question.config);
-    const field = normalizeProfileField(getString(config.profileField));
-    if (!field) continue;
-    const value = getProfileAnswerValue(answers[question.id]);
-    if (value) profile[field] = value;
-  }
-  return profile;
-}
-
-function normalizeProfileField(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  if (value === "semesterGroup") return "semester_group";
-  if (value === "roomType") return "room_type";
-  if (value === "dormExperience") return "dorm_experience";
-  if (
-    value === "gender" ||
-    value === "semester_group" ||
-    value === "department" ||
-    value === "rc" ||
-    value === "dormitory" ||
-    value === "room_type" ||
-    value === "dorm_experience"
-  ) {
-    return value;
-  }
-  return undefined;
-}
-
-function getProfileAnswerValue(answer: ParticipantAnswer): string | undefined {
-  if (typeof answer === "string") return answer.trim() || undefined;
-  if (isChoiceTextAnswer(answer)) return answer.choiceValue?.trim() || answer.text?.trim();
-  return undefined;
-}
-
-function compactJsonRecord(values: Record<string, unknown>): JsonRecord {
-  const record: JsonRecord = {};
-  for (const [key, value] of Object.entries(values)) {
-    if (value === undefined) continue;
-    if (isRecord(value)) {
-      record[key] = compactJsonRecord(value);
-      continue;
-    }
-    if (Array.isArray(value)) {
-      record[key] = value.filter((item): item is string | number | boolean => ["string", "number", "boolean"].includes(typeof item));
-      continue;
-    }
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null) {
-      record[key] = value;
-    }
-  }
-  return record;
-}
-
 function isImageTagAnswer(value: unknown): value is ImageTagAnswer {
   return isRecord(value) && Array.isArray(value.tags);
 }
@@ -1024,46 +810,13 @@ function isChoiceTextAnswer(value: unknown): value is ChoiceTextAnswer {
   return isRecord(value) && !Array.isArray(value.tags);
 }
 
-function getParticipantQuestionKind(question: Question): "scale" | "single_choice" | "multi_select" | "text" | "short_text" | "choice_text" | Question["questionType"] {
-  if (question.questionType === "attention_check") return "scale";
-  if (question.questionType === "profile") {
-    const config = toRecord(question.config);
-    return getString(config.inputType) === "single_choice" ? "single_choice" : "text";
-  }
-  if (question.questionType === "text" && isShortTextQuestion(question)) return "short_text";
-  if (question.questionType === "text" && isChoiceTextQuestion(question)) return "choice_text";
-  return question.questionType;
-}
-
-function isShortTextQuestion(question: Question): boolean {
-  if (question.questionType !== "text") return false;
-  const config = toRecord(question.config);
-  return config.textMode === "short" || config.inputMode === "short" || (config.multiline === false && !Array.isArray(config.options));
-}
-
-function isChoiceTextQuestion(question: Question): boolean {
-  if (question.questionType !== "text") return false;
-  const config = toRecord(question.config);
-  return (
-    config.textMode === "choice_then_text" ||
-    config.inputMode === "choice_then_text" ||
-    config.choiceFirst === true ||
-    Array.isArray(config.options)
-  );
-}
-
-function ratioFromPoint(offset: number, total: number): number {
-  if (!Number.isFinite(offset) || !Number.isFinite(total) || total <= 0) return 0.5;
-  return Math.min(1, Math.max(0, offset / total));
-}
-
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function formatQuestionType(question: Question): string {
-  if (isShortTextQuestion(question)) return "단답형";
-  if (isChoiceTextQuestion(question)) return "선택후 주관식";
+  if (getQuestionKind(question) === "short_text") return "단답형";
+  if (getQuestionKind(question) === "choice_text") return "선택후 주관식";
   const labels: Record<Question["questionType"], string> = {
     profile: "프로필",
     experience: "경험 여부",

@@ -8,6 +8,7 @@ export * from "./common";
 export * from "./preview";
 export * from "./profileOptions";
 export * from "./question";
+export * from "./questionInterpretation";
 export * from "./questionSet";
 export * from "./response";
 export * from "./section";

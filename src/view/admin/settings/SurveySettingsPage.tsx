@@ -1,6 +1,6 @@
 import { CheckCircle2, Copy, ExternalLink, Globe2, RefreshCcw, Rocket, Save, UserPlus, Users, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { canManageSurvey, getSurveyPublicPath, type SurveyCollaboratorRole } from "../../../api/admin/model";
 import {
   useCloseSurveyMutation,
@@ -16,6 +16,8 @@ import {
 } from "../../../api/admin/query";
 import { Button, ErrorState, LoadingState, SurveyStatusBadge } from "../../../components";
 import "./css/SurveySettingsPage.css";
+
+const participantPublicBaseUrl = "https://taglow.newdawn.co.kr";
 
 type Notice = Readonly<{
   tone: "success" | "error";
@@ -42,7 +44,7 @@ export function SurveySettingsPage() {
   const publicPath = survey ? getSurveyPublicPath(survey) : undefined;
   const publicUrl = useMemo(() => {
     if (!publicPath) return undefined;
-    return new URL(publicPath, window.location.origin).toString();
+    return new URL(publicPath, participantPublicBaseUrl).toString();
   }, [publicPath]);
   const dashboardUrl = useMemo(() => {
     if (!surveyId) return undefined;
@@ -133,17 +135,17 @@ export function SurveySettingsPage() {
           </div>
 
           <div className="tg-settings-page__url-box">
-            <span>공개 경로</span>
-            <strong>{publicPath ?? "공개 식별자가 없습니다."}</strong>
+            <span>공개 URL</span>
+            <strong>{publicUrl ?? "공개 식별자가 없습니다."}</strong>
             {publicUrl && publicPath ? (
               <div className="tg-settings-page__url-actions">
                 <Button variant="secondary" icon={<Copy size={15} aria-hidden="true" />} onClick={() => void copyPublicUrl(publicUrl)}>
                   복사
                 </Button>
-                <Link to={publicPath} target="_blank" rel="noreferrer" className="tg-settings-page__link-button">
+                <a href={publicUrl} target="_blank" rel="noreferrer" className="tg-settings-page__link-button">
                   <ExternalLink size={15} aria-hidden="true" />
                   <span>열기</span>
-                </Link>
+                </a>
               </div>
             ) : null}
           </div>

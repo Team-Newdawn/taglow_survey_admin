@@ -2,9 +2,35 @@ import { AlertTriangle, CheckCircle2, Eye, Monitor, MousePointer2, RefreshCcw, S
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { usePreviewSurveyQuery } from "../../../api/admin/query";
-import type { JsonRecord, Locale, PreviewDevice, PreviewOptions, Question, SurveyAsset, SurveySection } from "../../../api/admin/model";
+import {
+  getAssetUrl,
+  getChoiceOptions,
+  getConfiguredAssetId,
+  getExperienceFallbackOptions,
+  getMaxSelect,
+  getMaxTags,
+  getNumber,
+  getQuestionKind,
+  getScaleBounds,
+  getScaleLabels,
+  localizedOption,
+  localizedText,
+  ratioFromPoint,
+  shouldShowQuestion,
+  sortByOrder,
+  toRecord,
+  type ChoiceOption,
+  type JsonRecord,
+  type Locale,
+  type PreviewDevice,
+  type PreviewOptions,
+  type Question,
+  type SurveyAsset,
+  type SurveySection,
+} from "../../../api/admin/model";
 import { Button, EmptyState, ErrorState, LoadingState, StatusBadge, SurveyStatusBadge } from "../../../components";
 import { useAdminPreviewStore } from "../../../store";
+import { getPreviewIssues } from "./previewValidation";
 import "./css/SurveyPreviewPage.css";
 
 type PreviewAnswer = string | number | string[] | RankingAnswer | ChoiceTextPreviewAnswer | ImageTagDraft[] | ParticipantImageTagDraft;
@@ -13,18 +39,6 @@ type RankingAnswer = Record<string, number | undefined>;
 type ChoiceTextPreviewAnswer = Readonly<{
   choiceValue?: string;
   text?: string;
-}>;
-type PreviewIssue = Readonly<{
-  id: string;
-  tone: "warning" | "danger";
-  label: string;
-  sectionId?: string;
-  questionId?: string;
-}>;
-type ChoiceOption = Readonly<{
-  value: string;
-  labelKo: string;
-  labelEn?: string;
 }>;
 type ImageTagDraft = Readonly<{
   id: string;
@@ -109,7 +123,7 @@ export function SurveyPreviewPage() {
   const sortedQuestions = sortByOrder(previewQuery.data.questions);
   const activeSections = sectionId ? sortedSections.filter((section) => section.id === sectionId) : sortedSections;
   const issues = getPreviewIssues(sortedSections, sortedQuestions, previewQuery.data.assets, locale);
-  const visibleQuestions = sortedQuestions.filter((question) => isQuestionVisible(question, sortedQuestions, answers));
+  const visibleQuestions = sortedQuestions.filter((question) => shouldShowQuestion({ question, questions: sortedQuestions, values: answers }));
 
   return (
     <section className="tg-preview-page" aria-labelledby="survey-preview-title">
@@ -349,11 +363,11 @@ function QuestionControl(props: {
     return <ParticipantImageTagControl {...props} />;
   }
 
-  if (isShortTextQuestion(props.question)) {
+  if (getQuestionKind(props.question) === "short_text") {
     return <ShortTextControl {...props} />;
   }
 
-  if (isChoiceTextQuestion(props.question)) {
+  if (getQuestionKind(props.question) === "choice_text") {
     return <ChoiceTextControl {...props} options={getChoiceOptions(props.question)} />;
   }
 
@@ -430,10 +444,8 @@ function ScaleControl(props: {
   answer: PreviewAnswer | undefined;
   onAnswerChange: (answer: PreviewAnswer | undefined) => void;
 }) {
-  const config = toRecord(props.question.config);
-  const min = getNumber(config.scaleMin) ?? 1;
-  const max = getNumber(config.scaleMax) ?? 5;
-  const labels = getStringArray(props.locale === "en" ? config.labelsEn : config.labelsKo);
+  const { min, max } = getScaleBounds(props.question);
+  const labels = getScaleLabels(props.question, props.locale);
   const values = Array.from({ length: Math.max(1, max - min + 1) }, (_, index) => min + index);
 
   return (
@@ -488,8 +500,7 @@ function MultiSelectControl(props: {
   onAnswerChange: (answer: PreviewAnswer | undefined) => void;
 }) {
   const selected = Array.isArray(props.answer) ? props.answer.filter((value): value is string => typeof value === "string") : [];
-  const config = toRecord(props.question.config);
-  const maxSelect = getNumber(config.maxSelect);
+  const maxSelect = getMaxSelect(props.question);
 
   return (
     <div className="tg-preview-choice-list">
@@ -565,12 +576,11 @@ function ImageTagControl(props: {
   answer: PreviewAnswer | undefined;
   onAnswerChange: (answer: PreviewAnswer | undefined) => void;
 }) {
-  const config = toRecord(props.question.config);
-  const assetId = getString(config.assetId) ?? getString(config.asset_id);
+  const assetId = getConfiguredAssetId(props.question);
   const asset = props.assets.find((item) => item.id === assetId);
   const tags = isImageTagAnswer(props.answer) ? props.answer : [];
-  const maxTags = getNumber(config.maxTags) ?? 3;
-  const imageUrl = getAssetPreviewUrl(asset);
+  const maxTags = getMaxTags(props.question);
+  const imageUrl = getAssetUrl(asset);
 
   return (
     <div className="tg-preview-image-tag">
@@ -613,7 +623,7 @@ function ParticipantImageTagControl(props: {
   const config = toRecord(props.question.config);
   const answer = isParticipantImageTagAnswer(props.answer) ? props.answer : { tags: [] };
   const tags = answer.tags;
-  const maxTags = getNumber(config.maxTags) ?? 3;
+  const maxTags = getMaxTags(props.question);
 
   return (
     <div className="tg-preview-participant-image-tag">
@@ -666,134 +676,6 @@ function ParticipantImageTagControl(props: {
   );
 }
 
-function getPreviewIssues(sections: SurveySection[], questions: Question[], assets: SurveyAsset[], locale: Locale): PreviewIssue[] {
-  const issues: PreviewIssue[] = [];
-  const questionKeys = new Set<string>();
-
-  if (!sections.length) {
-    issues.push({ id: "no-sections", tone: "danger", label: "섹션이 없습니다." });
-  }
-
-  for (const section of sections) {
-    const sectionQuestions = questions.filter((question) => question.sectionId === section.id);
-    if (!sectionQuestions.length) {
-      issues.push({ id: `section-empty-${section.id}`, tone: "danger", label: `${localizedText(section.title, locale)} 섹션에 질문이 없습니다.`, sectionId: section.id });
-    }
-  }
-
-  for (const question of questions) {
-    if (questionKeys.has(question.questionKey)) {
-      issues.push({ id: `duplicate-${question.id}`, tone: "danger", label: `중복 question key: ${question.questionKey}`, questionId: question.id });
-    }
-    questionKeys.add(question.questionKey);
-
-    if (!question.title.ko.trim()) {
-      issues.push({ id: `title-ko-${question.id}`, tone: "danger", label: "한국어 질문 제목이 없습니다.", questionId: question.id });
-    }
-
-    if (locale === "en" && !question.title.en) {
-      issues.push({ id: `title-en-${question.id}`, tone: "warning", label: `${question.questionKey} 영문 제목이 없습니다.`, questionId: question.id });
-    }
-
-    const config = toRecord(question.config);
-    const options = getChoiceOptions(question);
-    if ((question.questionType === "single_choice" || question.questionType === "multi_select" || question.questionType === "ranking" || isChoiceTextQuestion(question)) && !options.length) {
-      issues.push({ id: `options-${question.id}`, tone: "danger", label: `${question.questionKey} 선택지가 없습니다.`, questionId: question.id });
-    }
-
-    if ((question.questionType === "scale" || question.questionType === "attention_check") && (!getNumber(config.scaleMin) || !getNumber(config.scaleMax))) {
-      issues.push({ id: `scale-${question.id}`, tone: "danger", label: `${question.questionKey} 척도 범위가 올바르지 않습니다.`, questionId: question.id });
-    }
-
-    if (question.questionType === "image_tag") {
-      const assetId = getString(config.assetId) ?? getString(config.asset_id);
-      if (!assetId || !assets.some((asset) => asset.id === assetId)) {
-        issues.push({ id: `asset-${question.id}`, tone: "danger", label: `${question.questionKey} 이미지 자산 연결이 없습니다.`, questionId: question.id });
-      }
-    }
-
-    if (question.questionType === "participant_image_tag" && !getStringArray(config.tagTypes).length) {
-      issues.push({ id: `participant-tags-${question.id}`, tone: "danger", label: `${question.questionKey} 태깅 카테고리가 없습니다.`, questionId: question.id });
-    }
-
-    if (question.questionType === "attention_check" && getString(config.expectedValue) === undefined && getNumber(config.expectedValue) === undefined) {
-      issues.push({ id: `attention-${question.id}`, tone: "danger", label: `${question.questionKey} expectedValue가 없습니다.`, questionId: question.id });
-    }
-  }
-
-  return issues;
-}
-
-function isQuestionVisible(question: Question, questions: Question[], answers: PreviewAnswers): boolean {
-  const condition = getVisibilityCondition(question);
-  if (!condition) return true;
-
-  const sourceKey = getString(condition.questionKey) ?? getString(condition.question_key) ?? getString(condition.sourceQuestionKey);
-  if (!sourceKey) return true;
-
-  const sourceQuestion = questions.find((item) => item.questionKey === sourceKey || item.id === sourceKey);
-  if (!sourceQuestion) return false;
-
-  const answer = answers[sourceQuestion.id];
-  const expected = condition.value ?? condition.equals ?? condition.expectedValue ?? condition.expected_value;
-  if (expected === undefined) return hasAnswer(answer);
-
-  if (Array.isArray(answer)) {
-    return answer.some((value) => String(value) === String(expected));
-  }
-
-  if (isChoiceTextAnswer(answer)) {
-    return String(answer.choiceValue ?? answer.text ?? "") === String(expected);
-  }
-
-  return String(answer) === String(expected);
-}
-
-function getVisibilityCondition(question: Question): JsonRecord | undefined {
-  const config = toRecord(question.config);
-  const value = config.visibleWhen ?? config.visible_when ?? config.condition ?? config.dependsOn ?? config.depends_on;
-  return isRecord(value) ? value : undefined;
-}
-
-function getChoiceOptions(question: Question): ChoiceOption[] {
-  const options = toRecord(question.config).options;
-  if (!Array.isArray(options)) return [];
-
-  return options.map((item, index) => {
-    if (typeof item === "string") {
-      return { value: `option_${index + 1}`, labelKo: item };
-    }
-    const option = toRecord(item);
-    const value = getString(option.value) ?? `option_${index + 1}`;
-    return {
-      value,
-      labelKo: getString(option.labelKo) ?? getString(option.label_ko) ?? getString(option.label) ?? value,
-      labelEn: getString(option.labelEn) ?? getString(option.label_en),
-    };
-  });
-}
-
-function getExperienceFallbackOptions(): ChoiceOption[] {
-  return [
-    { value: "yes", labelKo: "예", labelEn: "Yes" },
-    { value: "no", labelKo: "아니오", labelEn: "No" },
-    { value: "unknown", labelKo: "잘 모르겠음", labelEn: "Not sure" },
-  ];
-}
-
-function localizedText(value: { ko: string; en?: string }, locale: Locale): string {
-  return locale === "en" ? value.en || value.ko : value.ko;
-}
-
-function localizedOption(value: ChoiceOption, locale: Locale): string {
-  return locale === "en" ? value.labelEn || value.labelKo : value.labelKo;
-}
-
-function getAssetPreviewUrl(asset: SurveyAsset | undefined): string | undefined {
-  if (!asset) return undefined;
-  return getString(asset.metadata.signedUrl) ?? getString(asset.metadata.publicUrl) ?? getString(asset.metadata.public_url) ?? getString(asset.metadata.url);
-}
-
 function normalizeLocale(value: string | null): Locale {
   return value === "en" ? "en" : "ko";
 }
@@ -804,10 +686,6 @@ function normalizeDevice(value: string | null): PreviewDevice {
 
 function toggleClass(active: boolean): string {
   return ["tg-preview-toggle", active ? "tg-preview-toggle--active" : ""].filter(Boolean).join(" ");
-}
-
-function sortByOrder<TItem extends { orderIndex: number }>(items: readonly TItem[]): TItem[] {
-  return [...items].sort((a, b) => a.orderIndex - b.orderIndex);
 }
 
 function hasAnswer(answer: PreviewAnswer | undefined): boolean {
@@ -834,26 +712,9 @@ function isChoiceTextAnswer(value: unknown): value is ChoiceTextPreviewAnswer {
   return isRecord(value) && !Array.isArray(value.tags) && ("choiceValue" in value || "text" in value);
 }
 
-function isChoiceTextQuestion(question: Question): boolean {
-  if (question.questionType !== "text") return false;
-  const config = toRecord(question.config);
-  return (
-    config.textMode === "choice_then_text" ||
-    config.inputMode === "choice_then_text" ||
-    config.choiceFirst === true ||
-    Array.isArray(config.options)
-  );
-}
-
-function isShortTextQuestion(question: Question): boolean {
-  if (question.questionType !== "text") return false;
-  const config = toRecord(question.config);
-  return config.textMode === "short" || config.inputMode === "short" || (config.multiline === false && !Array.isArray(config.options));
-}
-
 function formatPreviewQuestionType(question: Question): string {
-  if (isShortTextQuestion(question)) return "단답형";
-  if (isChoiceTextQuestion(question)) return "선택후 주관식";
+  if (getQuestionKind(question) === "short_text") return "단답형";
+  if (getQuestionKind(question) === "choice_text") return "선택후 주관식";
   if (question.questionType === "single_choice") return "단일 선택";
   if (question.questionType === "multi_select") return "복수 선택";
   if (question.questionType === "text") return "주관식";
@@ -865,25 +726,4 @@ function formatPreviewQuestionType(question: Question): string {
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function toRecord(value: unknown): JsonRecord {
-  return isRecord(value) ? value : {};
-}
-
-function getString(value: unknown): string | undefined {
-  return typeof value === "string" && value ? value : undefined;
-}
-
-function getNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function getStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function ratioFromPoint(offset: number, total: number): number {
-  if (!Number.isFinite(offset) || !Number.isFinite(total) || total <= 0) return 0.5;
-  return Math.min(1, Math.max(0, offset / total));
 }
