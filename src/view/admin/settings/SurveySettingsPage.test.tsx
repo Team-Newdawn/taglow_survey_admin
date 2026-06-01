@@ -73,4 +73,27 @@ describe("SurveySettingsPage", () => {
       expect(screen.queryByRole("button", { name: "게시" })).not.toBeInTheDocument();
     });
   });
+
+  it("opens participant links on the production survey domain using public code when slug is empty", async () => {
+    renderSettings();
+
+    const openLink = await screen.findByRole("link", { name: "열기" });
+    expect(screen.getByText("https://taglow.newdawn.co.kr/survey/8K2PQA")).toBeInTheDocument();
+    expect(openLink).toHaveAttribute("href", "https://taglow.newdawn.co.kr/survey/8K2PQA");
+  });
+
+  it("prefers public slug over public code for participant links", async () => {
+    renderSettings({
+      getSurveyDetail: async () => ({
+        survey: { ...fakeSurvey, publicSlug: "handong-dorm-2026", publicCode: "8K2PQA" },
+        sections: [],
+        questions: [],
+        assets: [],
+      }),
+    });
+
+    const openLink = await screen.findByRole("link", { name: "열기" });
+    expect(screen.getByText("https://taglow.newdawn.co.kr/survey/handong-dorm-2026")).toBeInTheDocument();
+    expect(openLink).toHaveAttribute("href", "https://taglow.newdawn.co.kr/survey/handong-dorm-2026");
+  });
 });

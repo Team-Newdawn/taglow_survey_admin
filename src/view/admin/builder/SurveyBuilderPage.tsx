@@ -35,7 +35,7 @@ import {
   useUpdateSectionMutation,
   useUploadSurveyImageMutation,
 } from "../../../api/admin/query";
-import { canEditSurvey } from "../../../api/admin/model";
+import { canEditSurvey, getChoiceOptions as getNormalizedChoiceOptions } from "../../../api/admin/model";
 import type {
   JsonRecord,
   LocalizedText,
@@ -1354,21 +1354,19 @@ function QuestionConfigFields(props: {
         </div>
         {inputType === "single_choice" ? (
           <div className="tg-builder-profile-options">
-            <label className="tg-builder-field">
-              <span>세부 답변 항목</span>
-              <textarea
-                aria-label="세부 답변 항목"
-                rows={6}
-                value={optionsToText(config)}
-                disabled={props.disabled}
-                placeholder={"남성\n여성"}
-                onChange={(event) => setConfig({ options: textToOptions(event.target.value, choiceOptions) })}
-              />
-            </label>
+            <ChoiceOptionsEditor
+              label="세부 답변 항목"
+              rows={6}
+              config={config}
+              disabled={props.disabled}
+              koPlaceholder={"남성\n여성"}
+              enPlaceholder={"Male\nFemale"}
+              onOptionsChange={(options) => setConfig({ options })}
+            />
             <div className="tg-builder-config-summary" aria-label="세부 답변 항목 미리보기">
               {choiceOptions.length ? (
                 choiceOptions.map((option) => (
-                  <span key={option.value}>{option.labelKo}</span>
+                  <span key={option.value}>{option.labelEn ? `${option.labelKo} / ${option.labelEn}` : option.labelKo}</span>
                 ))
               ) : (
                 <span>선택지가 없습니다.</span>
@@ -1422,15 +1420,13 @@ function QuestionConfigFields(props: {
     return (
       <div className="tg-builder-config-panel">
         {displayGroupField}
-        <label className="tg-builder-field">
-          <span>선택지</span>
-          <textarea
-            rows={6}
-            value={optionsToText(config)}
-            disabled={props.disabled}
-            onChange={(event) => setConfig({ options: textToOptions(event.target.value) })}
-          />
-        </label>
+        <ChoiceOptionsEditor
+          label="세부 답변 항목"
+          rows={6}
+          config={config}
+          disabled={props.disabled}
+          onOptionsChange={(options) => setConfig({ options })}
+        />
       </div>
     );
   }
@@ -1488,23 +1484,22 @@ function QuestionConfigFields(props: {
           <FileText size={16} aria-hidden="true" />
           <span>참여자는 분류를 먼저 선택한 뒤 주관식 답변을 작성합니다.</span>
         </div>
-        <label className="tg-builder-field">
-          <span>선택 항목</span>
-          <textarea
-            rows={5}
-            value={optionsToText(config)}
-            disabled={props.disabled}
-            placeholder={"불편\n개선\n칭찬\n문의\n기타"}
-            onChange={(event) =>
-              setConfig({
-                textMode: "choice_then_text",
-                multiline: true,
-                maxLength: Number(config.maxLength ?? 1000),
-                options: textToOptions(event.target.value, choiceOptions),
-              })
-            }
-          />
-        </label>
+        <ChoiceOptionsEditor
+          label="세부 답변 항목"
+          rows={5}
+          config={config}
+          disabled={props.disabled}
+          koPlaceholder={"불편\n개선\n칭찬\n문의\n기타"}
+          enPlaceholder={"Complaint\nImprovement\nPraise\nInquiry\nOther"}
+          onOptionsChange={(options) =>
+            setConfig({
+              textMode: "choice_then_text",
+              multiline: true,
+              maxLength: Number(config.maxLength ?? 1000),
+              options,
+            })
+          }
+        />
         <label className="tg-builder-field">
           <span>최대 글자 수</span>
           <input
@@ -1674,6 +1669,50 @@ function QuestionConfigFields(props: {
     <div className="tg-builder-config-panel tg-builder-config-panel--quiet">
       {displayGroupField}
       <span>{getQuestionTypeLabel(toPersistedQuestionType(props.questionType), config as QuestionConfig)} 문항은 기본 설정으로 저장됩니다.</span>
+    </div>
+  );
+}
+
+function ChoiceOptionsEditor(props: {
+  label: string;
+  config: JsonRecord;
+  disabled: boolean;
+  rows?: number;
+  koPlaceholder?: string;
+  enPlaceholder?: string;
+  onOptionsChange: (options: Array<{ value: string; labelKo: string; labelEn?: string }>) => void;
+}) {
+  const existingOptions = getChoiceOptions(props.config);
+  const koText = optionsToText(props.config, "ko");
+  const enText = optionsToText(props.config, "en");
+
+  return (
+    <div className="tg-builder-choice-options">
+      <span className="tg-builder-choice-options__title">{props.label}</span>
+      <div className="tg-builder-choice-options__grid">
+        <label className="tg-builder-field">
+          <span>한국어</span>
+          <textarea
+            aria-label={`${props.label} 한국어`}
+            rows={props.rows ?? 6}
+            value={koText}
+            disabled={props.disabled}
+            placeholder={props.koPlaceholder}
+            onChange={(event) => props.onOptionsChange(textToOptions(event.target.value, existingOptions, enText))}
+          />
+        </label>
+        <label className="tg-builder-field">
+          <span>영어</span>
+          <textarea
+            aria-label={`${props.label} 영어`}
+            rows={props.rows ?? 6}
+            value={enText}
+            disabled={props.disabled}
+            placeholder={props.enPlaceholder}
+            onChange={(event) => props.onOptionsChange(textToOptions(koText, existingOptions, event.target.value))}
+          />
+        </label>
+      </div>
     </div>
   );
 }
@@ -2162,46 +2201,38 @@ function splitLines(value: string): string[] {
     .filter(Boolean);
 }
 
-function optionsToText(config: JsonRecord): string {
-  return getChoiceOptions(config)
-    .map((option) => option.labelKo)
-    .filter(Boolean)
-    .join("\n");
+function optionsToText(config: JsonRecord, locale: "ko" | "en" = "ko"): string {
+  const labels = getChoiceOptions(config).map((option) => (locale === "en" ? option.labelEn ?? "" : option.labelKo));
+  if (locale === "en") return trimTrailingEmptyLines(labels).join("\n");
+  return labels.filter(Boolean).join("\n");
 }
 
-function textToOptions(value: string, existingOptions: Array<{ value: string; labelKo: string }> = []) {
-  return splitLines(value).map((label, index) => ({
-    value: existingOptions[index]?.value ?? `option_${index + 1}`,
-    labelKo: label,
-  }));
+function textToOptions(value: string, existingOptions: Array<{ value: string; labelKo: string; labelEn?: string }> = [], enValue?: string) {
+  const englishLabels = typeof enValue === "string" ? splitOptionLines(enValue) : undefined;
+  return splitLines(value).map((label, index) => {
+    const labelEn = englishLabels ? englishLabels[index]?.trim() : existingOptions[index]?.labelEn?.trim();
+    return {
+      value: existingOptions[index]?.value ?? `option_${index + 1}`,
+      labelKo: label,
+      ...(labelEn ? { labelEn } : {}),
+    };
+  });
 }
 
 function getChoiceOptions(config: JsonRecord): Array<{ value: string; labelKo: string; labelEn?: string }> {
-  const options = Array.isArray(config.options) ? config.options : [];
-  return options
-    .map((option, index) => normalizeChoiceOption(option, index))
-    .filter((option): option is { value: string; labelKo: string; labelEn?: string } => Boolean(option));
+  return getNormalizedChoiceOptions(config);
 }
 
-function normalizeChoiceOption(option: unknown, index: number): { value: string; labelKo: string; labelEn?: string } | undefined {
-  if (typeof option === "string" && option.trim()) {
-    return { value: `option_${index + 1}`, labelKo: option.trim() };
+function splitOptionLines(value: string): string[] {
+  return value.split("\n").map((line) => line.trim());
+}
+
+function trimTrailingEmptyLines(values: string[]): string[] {
+  const next = [...values];
+  while (next.length > 0 && !next[next.length - 1]) {
+    next.pop();
   }
-  if (!isRecord(option)) return undefined;
-  const labelKo =
-    typeof option.labelKo === "string"
-      ? option.labelKo
-      : isRecord(option.label) && typeof option.label.ko === "string"
-        ? option.label.ko
-        : typeof option.label === "string"
-          ? option.label
-          : typeof option.value === "string"
-            ? option.value
-            : "";
-  if (!labelKo.trim()) return undefined;
-  const value = typeof option.value === "string" && option.value.trim() ? option.value : `option_${index + 1}`;
-  const labelEn = typeof option.labelEn === "string" ? option.labelEn : undefined;
-  return labelEn ? { value, labelKo, labelEn } : { value, labelKo };
+  return next;
 }
 
 function isRecord(value: unknown): value is JsonRecord {

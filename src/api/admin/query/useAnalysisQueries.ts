@@ -112,7 +112,7 @@ export function useHeatmapPointsQuery(surveyId: string, filters: HeatmapFilters,
 export function useImageTagAnswersQuery(surveyId: string, filters: HeatmapFilters, options: AnalysisQueryOptions = {}) {
   const controller = useAdminApiController();
   return useQuery({
-    queryKey: adminQueryKeys.imageTagAnswersInfinite(surveyId, filters),
+    queryKey: adminQueryKeys.imageTagAnswers(surveyId, filters),
     queryFn: () => controller.listImageTagAnswers({ surveyId, filters }).then((page) => page.items),
     enabled: Boolean(surveyId) && (options.enabled ?? true),
     staleTime: analysisStaleTimeMs,
@@ -122,7 +122,7 @@ export function useImageTagAnswersQuery(surveyId: string, filters: HeatmapFilter
 export function useImageTagAnswersInfiniteQuery(surveyId: string, filters: HeatmapFilters, options: AnalysisQueryOptions = {}) {
   const controller = useAdminApiController();
   return useInfiniteQuery({
-    queryKey: adminQueryKeys.imageTagAnswers(surveyId, filters),
+    queryKey: adminQueryKeys.imageTagAnswersInfinite(surveyId, filters),
     queryFn: ({ pageParam }) => controller.listImageTagAnswers({ surveyId, filters: { ...filters, cursor: pageParam, limit: filters.limit ?? 50 } }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -134,7 +134,7 @@ export function useImageTagAnswersInfiniteQuery(surveyId: string, filters: Heatm
 export function useTextAnswersQuery(surveyId: string, filters: TextAnswerFilters, options: AnalysisQueryOptions = {}) {
   const controller = useAdminApiController();
   return useQuery({
-    queryKey: adminQueryKeys.textAnswersInfinite(surveyId, filters),
+    queryKey: adminQueryKeys.textAnswers(surveyId, filters),
     queryFn: () => controller.listTextAnswers({ surveyId, filters }).then((page) => page.items),
     enabled: Boolean(surveyId) && (options.enabled ?? true),
     staleTime: analysisStaleTimeMs,
@@ -144,7 +144,7 @@ export function useTextAnswersQuery(surveyId: string, filters: TextAnswerFilters
 export function useTextAnswersInfiniteQuery(surveyId: string, filters: TextAnswerFilters, options: AnalysisQueryOptions = {}) {
   const controller = useAdminApiController();
   return useInfiniteQuery({
-    queryKey: adminQueryKeys.textAnswers(surveyId, filters),
+    queryKey: adminQueryKeys.textAnswersInfinite(surveyId, filters),
     queryFn: ({ pageParam }) => controller.listTextAnswers({ surveyId, filters: { ...filters, cursor: pageParam, limit: filters.limit ?? 50 } }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,

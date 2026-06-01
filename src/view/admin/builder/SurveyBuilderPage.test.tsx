@@ -761,8 +761,10 @@ describe("SurveyBuilderPage", () => {
     expect(within(editor).getByText("여성")).toBeInTheDocument();
     expect(within(editor).queryByText("기타")).not.toBeInTheDocument();
 
-    const optionsInput = within(editor).getByLabelText("세부 답변 항목");
-    fireEvent.change(optionsInput, { target: { value: "남성\n여성" } });
+    const optionsKoInput = within(editor).getByLabelText("세부 답변 항목 한국어");
+    const optionsEnInput = within(editor).getByLabelText("세부 답변 항목 영어");
+    fireEvent.change(optionsKoInput, { target: { value: "남성\n여성" } });
+    fireEvent.change(optionsEnInput, { target: { value: "Male\nFemale" } });
     await user.click(within(editor).getByRole("button", { name: "저장" }));
 
     await waitFor(() => {
@@ -776,8 +778,8 @@ describe("SurveyBuilderPage", () => {
             profileField: "gender",
             inputType: "single_choice",
             options: [
-              { value: "남성", labelKo: "남성" },
-              { value: "여성", labelKo: "여성" },
+              { value: "남성", labelKo: "남성", labelEn: "Male" },
+              { value: "여성", labelKo: "여성", labelEn: "Female" },
             ],
           },
         }),
